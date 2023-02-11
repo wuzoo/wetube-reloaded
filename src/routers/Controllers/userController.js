@@ -2,6 +2,7 @@ import User from "../../models/User";
 import bcrypt from "bcrypt";
 import fetch from "node-fetch";
 import { token } from "morgan";
+import { application, response } from "express";
 
 export const getJoin = (req, res) => 
     res.render("join", {pageTitle: "Join"})
@@ -117,3 +118,66 @@ export const logout = (req, res) => {
 }
 export const edit = (req, res) => res.send("Edit User");
 export const see = (req, res) => res.send("See");
+
+
+export const startKakaoLogin = (req, res) => {
+    const baseUrl = "https://kauth.kakao.com/oauth/authorize";
+    const config = {
+        client_id: process.env.KK_CLIENT,
+        redirect_uri: "http://localhost:4000/users/kakao/finish",
+        response_type: "code",
+    }
+    const params = new URLSearchParams(config).toString();
+    const finalUrl = `${baseUrl}?${params}`;
+    return res.redirect(finalUrl);
+}
+export const finishKakaoLogin = async (req, res) => {
+    const baseUrl = "https://kauth.kakao.com/oauth/token";
+    const config = {
+        client_id: process.env.KK_CLIENT,
+        redirect_uri: "http://localhost:4000/users/kakao/finish",
+        code: req.query.code,
+        grant_type: "authorization_code",
+    }
+    const params = new URLSearchParams(config).toString();
+    const finalUrl = `${baseUrl}?${params}`;
+    const tokenRequest = await (await fetch(finalUrl, {
+        method: "POST",
+    })).json();
+    if ("access_token" in tokenRequest){
+        const {access_token} = tokenRequest;
+        const apiUrl = "https://kapi.kakao.com/v2/user/me";
+        const userData = await (await fetch(`${apiUrl}`, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            }
+        })).json();
+        console.log(userData);
+        const kakaoAccount = userData.kakao_account;
+        console.log(kakaoAccount);
+        const kakaoEmail = kakaoAccount.email;
+        const kakaoProfile = kakaoAccount.profile;
+
+        if (kakaoAccount.is_email_valid === false ||
+            kakaoAccount.is_email_verified === false){
+                return res.redirect("/login");
+            }
+
+        let user = await User.findOne({email: kakaoEmail})
+        if (!user){
+            user = await User.create({
+                name: kakaoProfile.nickname,
+                socialOnly:true,
+                username:kakaoProfile.nickname,
+                email:kakaoAccount.email,
+                password:"",
+                location:"",
+            });
+        }
+        req.session.loggedin = true;
+        req.session.user = user;
+        return res.redirect("/")
+    }else{
+        return res.redirect("/login")
+    }
+}
