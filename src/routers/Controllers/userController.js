@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import fetch from "node-fetch";
 import { token } from "morgan";
 import { application, response } from "express";
+import Video from "../../models/video";
 
 export const getJoin = (req, res) => 
     res.render("join", {pageTitle: "Join"})
@@ -82,7 +83,7 @@ export const finishGithubLogin = async (req, res) =>{
             Authorization : `Bearer ${access_token}`,
             }
         })).json();
-        // console.log(userData);
+        console.log(userData);
         const emailData = await(await fetch(`${apiUrl}/user/emails`, { // email data
             headers: {
                 Authorization: `Bearer ${access_token}`,
@@ -98,6 +99,7 @@ export const finishGithubLogin = async (req, res) =>{
         if (!user){
                 user = await User.create({
                 name:userData.name? userData.name : "Unknown",
+                avatarUrl: userData.avatar_url,
                 socialOnly: true,
                 username: userData.login,
                 email: emailObj.email,
@@ -112,45 +114,6 @@ export const finishGithubLogin = async (req, res) =>{
         return res.redirect("/login");
     }
 };
-export const logout = (req, res) => {
-    req.session.destroy();
-    return res.redirect("/");
-}
-export const getEdit = (req, res) => {
-    console.log(req.session);
-    return res.render("edit-profile", {pageTitle: "Edit Profile"});
-};
-
-export const postEdit = async (req, res) => {
-    const {
-        session: {
-            user : {_id},
-        },
-        body: {
-            name, email, username, location,
-        },
-    } = req;
-    const Existemail = await User.findOne({email});
-    const Existuser = await User.findOne({username});
-    console.log(Existemail, Existuser);
-    if (Existuser && Existuser._id.toString() !== _id){
-        return res.render("edit-profile", {pageTitle: "Edit Profile",
-        errorMessage: "Username is already exists."})
-    }
-    if (Existemail && Existemail._id.toString() !== _id){
-        return res.render("edit-profile", {pageTitle: "Edit Profile",
-        errorMessage: "Email is already exists."})
-    }
-    const updatedUser = await User.findByIdAndUpdate(_id, 
-        {name, email, username, location},
-        { new : true});
-    req.session.user = updatedUser;
-    return res.render("edit-profile", {pageTitle: "Edit Profile"});
-};
-
-export const see = (req, res) => res.send("See");
-
-
 export const startKakaoLogin = (req, res) => {
     const baseUrl = "https://kauth.kakao.com/oauth/authorize";
     const config = {
@@ -211,4 +174,98 @@ export const finishKakaoLogin = async (req, res) => {
     }else{
         return res.redirect("/login")
     }
+}
+export const logout = (req, res) => {
+    req.session.destroy();
+    return res.redirect("/");
+}
+export const getEdit = (req, res) => {
+    console.log(req.session);
+    return res.render("edit-profile", {pageTitle: "Edit Profile"});
+};
+
+export const postEdit = async (req, res) => {
+    const {
+        session: {
+            user : {_id, avatarUrl},
+        },
+        body: {
+            name, email, username, location,
+        }, file,
+    } = req;
+
+    console.log(file);
+    // Unique property인 email user 중복 체크 확인
+    const Existemail = await User.findOne({email});
+    const Existuser = await User.findOne({username});
+    if (Existuser && Existuser._id.toString() !== _id){
+        return res.render("edit-profile", {pageTitle: "Edit Profile",
+        errorMessage: "Username is already exists."})
+    }
+    if (Existemail && Existemail._id.toString() !== _id){
+        return res.render("edit-profile", {pageTitle: "Edit Profile",
+        errorMessage: "Email is already exists."})
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(_id, {
+        avatarUrl: file ? file.path : avatarUrl,
+        name, 
+        email, 
+        username, 
+        location
+    },
+    { 
+        new : true
+    });
+    req.session.user = updatedUser;
+    return res.render("edit-profile", {pageTitle: "Edit Profile"});
+};
+
+export const getChangePassword = (req, res) => {
+    return res.render("change-password", {pageTitle: "Change Password"});
+}
+export const postChangePassword = async (req, res) => {
+    const {
+        session: {
+            user : {_id, password},
+        },
+        body: {
+            oldPassword, newPassword, newPasswordConfirmation,
+        },
+    } = req;
+    const ok = await bcrypt.compare(oldPassword, password);
+    if (oldPassword === newPassword){
+        return res.status(400).render("change-password", {pageTitle: "Change Password",
+            errorMessage: "The old password equals new password"});
+    }
+    if (!ok){
+        return res.status(400).render("change-password", {pageTitle: "Change Password", 
+            errorMessage: "Current password is incorrect"});
+    }
+    if (newPassword !== newPasswordConfirmation){
+        return res.status(400).render("change-password", {pageTitle: "Change Password", 
+            errorMessage: "Password does not match"});
+    }
+    const user = await User.findById(_id);
+    user.password = newPassword;
+    await user.save();
+    req.session.user.password = user.password;
+
+    req.session.destroy();
+    return res.redirect("/login");
+}
+
+export const see = async (req, res) => {
+    const {id} = req.params;
+    const user = await(await User.findById(id)).populate({
+        path: "videos",
+        populate: {
+            path: "owner",
+            model: "User",
+        },
+    });
+    if(!user){
+        return res.status(404).render("404", {pageTitle: "Not Found"});
+    }
+    return res.render("profile", {pageTitle:`${user.name}의 Profile`, user});
 }

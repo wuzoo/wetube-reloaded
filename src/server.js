@@ -2,11 +2,15 @@ import "./db.js"; // DB가 연결되었는지 확인
 import Video from "./models/video"; // 연결 확인 후 Video model을 인식시킴
 import express from "express";
 import morgan from "morgan";
+
 import userRouter from "./routers/userRouter";
 import videoRouter from "./routers/videoRouter";
 import rootRouter from "./routers/rootRouter";
+
 import session from "express-session"
+
 import {localsMiddleware} from "./middlewares";
+
 import MongoStore from "connect-mongo";
 
 const app = express();
@@ -31,7 +35,12 @@ app.use(session({
 //         next();
 //     })
 // })
+
 app.use(localsMiddleware);
+
+app.use("/uploads", express.static("uploads"));
+app.use("/static", express.static("assets"));
+// 정적 파일 제공
 
 app.use("/", rootRouter);
 app.use("/users", userRouter);

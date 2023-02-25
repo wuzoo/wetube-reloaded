@@ -27,5 +27,5 @@
       "path": "C:\\WINDOWS\\System32\\wsl.exe",
       "args": ["-d", "Ubuntu"]
     }
-  },
+  }
 }
