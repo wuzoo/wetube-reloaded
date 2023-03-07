@@ -1,14 +1,18 @@
 const video = document.querySelector("video");
-const play = document.getElementById("play");
-const mute = document.getElementById("mute");
+const playBtn = document.getElementById("play");
+const playBtnIcon = playBtn.querySelector("i");
+const muteBtn = document.getElementById("mute");
+const muteBtnIcon = muteBtn.querySelector("i");
 const volume = document.getElementById("volume");
-
 const currentTime = document.getElementById("currentTime");
 const totalTime = document.getElementById("totalTime");
 const timeline = document.getElementById("timeline");
 const fullScreenBtn = document.getElementById("fullScreen");
+const fullScreenIcon = fullScreenBtn.querySelector("i");
 const videoContainer = document.getElementById("videoContainer");
 const videoControls = document.getElementById("videoControls");
+
+console.log(videoContainer.dataset);
 
 let volumeValue = 0.5;
 let controlsMovementTimeout = null;
@@ -22,7 +26,7 @@ let setvideoPlayStatus = false;
 videoContainer.fullScreenElement = null;
 
 const formatTime = (seconds) =>{
-    return new Date(seconds * 1000).toISOString().substring(11, 19);
+    return new Date(seconds * 1000).toISOString().substring(14, 19);
 }
 
 const handlePlayClick = () =>{
@@ -31,7 +35,7 @@ const handlePlayClick = () =>{
     }else{
         video.pause();
     }
-    play.innerText = video.paused ? "Play" : "Pause";
+    playBtnIcon.classList = video.paused ? "fas fa-play" : "fas fa-pause";
 }
 
 const handleMute = () =>{
@@ -40,7 +44,7 @@ const handleMute = () =>{
     }else{
         video.muted = true;
     }
-    mute.innerText = video.muted ? "Unmute" : "Mute";
+    muteBtnIcon.classList = video.muted ? "fas fa-volume-mute" : "fas fa-volume-up";
     volume.value = video.muted ? 0 : volumeValue;
 }
 const handleVolume = (event) =>{
@@ -67,13 +71,16 @@ const handleTimelineChange = (event) => {
         setvideoPlayStatus = true;
     }
     video.pause();
+    playBtnIcon.classList = "fas fa-play"
     video.currentTime = value;
 }
 const handleSetTimeline = () =>{
     if (videoPlayStatus){
         video.play();
+        playBtnIcon.classList = "fas fa-pause";
     }else{
         video.pause();
+        playBtnIcon.classList = "fas fa-play";
     }
     setvideoPlayStatus = false;
 }
@@ -81,15 +88,17 @@ const handleFullScreen = () =>{
     const fullscreen = document.fullscreenElement;
     if (fullscreen){
         document.exitFullscreen();
+        fullScreenIcon.classList = "fas fa-expand";
     }else{
         videoContainer.requestFullscreen();
+        fullScreenIcon.classList = "fas fa-expand";
     }
 }
 const handleFullScreenChange = () =>{
     if(document.fullscreenElement){
-        fullScreenBtn.innerText = "Exit full Screen"
+        fullScreenIcon.classList = "fas fa-expand"
     }else{
-        fullScreenBtn.innerText = "Enter full Screen"
+        fullScreenIcon.classList = "fas fa-expandn"
     }
 }
 const hideControls = () => videoControls.classList.remove("showing");
@@ -108,7 +117,24 @@ const handleMouseMove = () => {
 const handleMouseLeave = () => {
     ControlsLeaveTimeout = setTimeout(hideControls, 3000)
 }
+const handleClickVideo = () => {
+    handlePlayClick();
+}
+document.addEventListener("keyup", (event)=>{
+    if(event.key == ' '){
+        handlePlayClick();
+    }
+    if(event.key == "m"){
+        handleMute();
+    }
+});
+const handleEnded = () => {
+    const { id } = videoContainer.dataset;
+    fetch(`/api/videos/${id}/view`, {
+        method: "POST",
+    });
 
+}
 // handle__ 함수는 event가 발생시 호출되는 함수, 즉 __되었을 때 -> 행동 이라고 생각하면 편함
 play.addEventListener("click", handlePlayClick);
 mute.addEventListener("click", handleMute);
@@ -119,6 +145,7 @@ timeline.addEventListener("input", handleTimelineChange);
 timeline.addEventListener("change", handleSetTimeline);
 fullScreenBtn.addEventListener("click", handleFullScreen);
 videoContainer.addEventListener("fullscreenchange", handleFullScreenChange);
-video.addEventListener("mousemove", handleMouseMove);
-video.addEventListener("mouseleave", handleMouseLeave);
-video.addEventListener("keydown", handleKeyDown);
+videoContainer.addEventListener("mousemove", handleMouseMove);
+videoContainer.addEventListener("mouseleave", handleMouseLeave);
+video.addEventListener("click", handleClickVideo);
+video.addEventListener("ended", handleEnded);

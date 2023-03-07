@@ -7,11 +7,13 @@ import userRouter from "./routers/userRouter";
 import videoRouter from "./routers/videoRouter";
 import rootRouter from "./routers/rootRouter";
 
-import session from "express-session"
+import session from "express-session";
+import flash from "express-flash";
 
 import {localsMiddleware} from "./middlewares";
 
 import MongoStore from "connect-mongo";
+import apiRouter from "./routers/apiRouter.js";
 
 const app = express();
 const logger = morgan("dev");
@@ -20,6 +22,7 @@ app.set("view engine", "pug");
 app.set("views", process.cwd() + "/src/views");
 app.use(logger);
 app.use(express.urlencoded({extended: true}));
+app.use(flash());
 
 app.use(session({
     secret: process.env.COOKIE_SECRET,
@@ -45,5 +48,6 @@ app.use("/static", express.static("assets"));
 app.use("/", rootRouter);
 app.use("/users", userRouter);
 app.use("/videos", videoRouter);
+app.use("/api", apiRouter);
 
 export default app;

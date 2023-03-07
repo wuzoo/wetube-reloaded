@@ -9,6 +9,7 @@
 @import "../components/shared.scss";
 @import "../components/forms.scss";
 @import "../components/social-login.scss";
+@import "../components/video-player.scss";
 
 // Screens
 @import "../screens/search.scss";
@@ -32,4 +33,36 @@ main{
     width: 100%;
     margin: 0px auto;
     margin-top: 50px;
+}
+video{
+    width: 100%;
+    max-height: 500px;
+}
+@keyframes goAway{
+    from{
+        opacity: 1;
+        transform: none;
+    }
+    to{
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+}
+.messages{
+    position: absolute;
+    left: 0;
+    right: 0;
+    top : 10px;
+    text-align: center;
+    margin: 0 auto;
+    max-width: 200px;
+    padding: 20px;
+    animation: goAway .5s ease-in-out forwards;
+    animation-delay: 5s;
+    &.error{
+        background-color: tomato;
+        border-radius: 20px;
+        font-size: 20px;
+    }
+
 }
